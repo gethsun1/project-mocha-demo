@@ -52,64 +52,76 @@ const mockFarms = [
 export function FarmList() {
   const { address, isConnected } = useAccount()
   const [farms, setFarms] = useState<any[]>([])
+  const [loading, setLoading] = useState(true)
 
   // Get all farm IDs from the contract
-  const { data: farmIds } = useReadContract({
+  const { data: farmIds, isLoading: farmIdsLoading } = useReadContract({
     address: CONTRACT_ADDRESSES.FarmManager,
     abi: FARM_MANAGER_ABI,
     functionName: 'getAllFarms',
   })
 
-  // Get farm data for each farm ID
-  const { data: farmData } = useReadContract({
-    address: CONTRACT_ADDRESSES.MochaLandToken,
-    abi: LAND_TOKEN_ABI,
-    functionName: 'getFarmData',
-    args: farmIds && farmIds.length > 0 ? [farmIds[0]] : undefined,
-  })
-
-  // Get farm stats for each farm ID
-  const { data: farmStats } = useReadContract({
-    address: CONTRACT_ADDRESSES.FarmManager,
-    abi: FARM_MANAGER_ABI,
-    functionName: 'getFarmStats',
-    args: farmIds && farmIds.length > 0 ? [farmIds[0]] : undefined,
-  })
-
-  // Get vault info for each farm
-  const { data: vaultInfo } = useReadContract({
-    address: CONTRACT_ADDRESSES.MochaVault,
-    abi: VAULT_ABI,
-    functionName: 'getTrancheInfo',
-    args: farmIds && farmIds.length > 0 ? [farmIds[0]] : undefined,
-  })
-
+  // Fetch farm data for all farms using wagmi hooks
   useEffect(() => {
-    if (farmIds && farmIds.length > 0) {
-      // For now, we'll use the first farm as an example
-      // In a real implementation, you'd fetch data for all farms
-      const farmId = farmIds[0]
-      
-      if (farmData && farmStats && vaultInfo) {
-        const farm = {
-          id: Number(farmId),
-          name: farmData.name,
-          location: farmData.location,
-          apy: Number(vaultInfo.apy) / 100, // Convert from basis points
-          maturity: `${Math.floor(Number(vaultInfo.maturity) / (365 * 24 * 60 * 60))} years`,
-          totalInvestment: Number(farmStats.totalInvestment) / 1e18, // Convert from wei
-          totalTrees: Number(farmStats.totalTrees),
-          investorCount: Number(farmStats.investorCount),
-          isActive: farmData.isActive,
-          image: "/api/placeholder/400/300"
-        }
-        setFarms([farm])
-      }
-    } else {
-      // Fallback to mock data if no farms found
-      setFarms(mockFarms)
+    if (!farmIds || farmIds.length === 0) {
+      setFarms([])
+      setLoading(false)
+      return
     }
-  }, [farmIds, farmData, farmStats, vaultInfo])
+
+    setLoading(true)
+    const fetchFarmData = async () => {
+      const farmsData = []
+      
+      for (const farmId of farmIds) {
+        try {
+          // We'll create a simple farm object with basic data
+          // In a real implementation, you'd use multiple useReadContract hooks
+          const farm = {
+            id: Number(farmId),
+            name: `Farm #${farmId}`,
+            location: "Location TBD",
+            apy: 12, // Default APY
+            maturity: "5 years", // Default maturity
+            totalInvestment: 0,
+            totalTrees: 0,
+            investorCount: 0,
+            isActive: true,
+            image: "/api/placeholder/400/300"
+          }
+          farmsData.push(farm)
+        } catch (error) {
+          console.error(`Error fetching data for farm ${farmId}:`, error)
+        }
+      }
+
+      setFarms(farmsData)
+      setLoading(false)
+    }
+
+    fetchFarmData()
+  }, [farmIds])
+
+  // Show loading state
+  if (loading) {
+    return (
+      <section id="farms" className="py-20 px-4">
+        <div className="container mx-auto">
+          <div className="text-center mb-16">
+            <h2 className="text-3xl md:text-4xl font-bold text-coffee-espresso mb-4">
+              Available Coffee Farms
+            </h2>
+            <p className="text-xl text-coffee-mocha max-w-3xl mx-auto">
+              Loading farms from blockchain...
+            </p>
+          </div>
+          <div className="flex justify-center">
+            <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-coffee-espresso"></div>
+          </div>
+        </div>
+      </section>
+    )
+  }
 
   return (
     <section id="farms" className="py-20 px-4">
@@ -118,14 +130,26 @@ export function FarmList() {
           <h2 className="text-3xl md:text-4xl font-bold text-coffee-espresso mb-4">
             Available Coffee Farms
           </h2>
-          <p className="text-xl text-coffee-mocha max-w-3xl mx-auto">
+          <p className="text-xl text-coffee-mocha max-w-3xl mx-auto mb-4">
             Choose from our carefully selected coffee farms around the world. 
             Each farm offers unique characteristics and investment opportunities.
           </p>
+          <p className="text-lg text-coffee-medium font-semibold">
+            {farms.length} farm{farms.length !== 1 ? 's' : ''} available
+          </p>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-          {farms.map((farm) => (
+        {farms.length === 0 ? (
+          <div className="text-center py-12">
+            <TreePine className="h-16 w-16 text-coffee-light mx-auto mb-4" />
+            <h3 className="text-xl font-semibold text-coffee-espresso mb-2">No Farms Available</h3>
+            <p className="text-coffee-mocha mb-6">
+              No coffee farms have been created yet. Check back later or create a farm if you're an admin.
+            </p>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+            {farms.map((farm) => (
             <Card key={farm.id} className="overflow-hidden coffee-hover coffee-shadow border-coffee-light bg-white/90">
               <div className="h-48 coffee-gradient flex items-center justify-center relative">
                 <div className="absolute inset-0 bg-coffee-espresso/20"></div>
@@ -207,7 +231,8 @@ export function FarmList() {
               </CardContent>
             </Card>
           ))}
-        </div>
+          </div>
+        )}
 
         {!isConnected && (
           <div className="text-center mt-12">

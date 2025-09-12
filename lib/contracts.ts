@@ -55,6 +55,13 @@ export const FARM_MANAGER_ABI = [
     "type": "function"
   },
   {
+    "inputs": [{"internalType": "address", "name": "user", "type": "address"}],
+    "name": "getUserInvestments",
+    "outputs": [{"internalType": "uint256[]", "name": "", "type": "uint256[]"}],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
     "inputs": [
       {"internalType": "address", "name": "farmer", "type": "address"},
       {"internalType": "string", "name": "name", "type": "string"},
@@ -210,6 +217,13 @@ export const BEAN_TOKEN_ABI = [
   {
     "inputs": [{"internalType": "address", "name": "user", "type": "address"}],
     "name": "calculateRewards",
+    "outputs": [{"internalType": "uint256", "name": "", "type": "uint256"}],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [{"internalType": "address", "name": "user", "type": "address"}],
+    "name": "treeBonds",
     "outputs": [{"internalType": "uint256", "name": "", "type": "uint256"}],
     "stateMutability": "view",
     "type": "function"

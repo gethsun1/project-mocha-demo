@@ -58,7 +58,7 @@ export function CreateFarmForm() {
         abi: FARM_MANAGER_ABI,
         functionName: 'createFarm',
         args: [
-          formData.farmer || address, // Use connected address if farmer not specified
+          (formData.farmer || address || '0x0000000000000000000000000000000000000000') as `0x${string}`, // Use connected address if farmer not specified
           formData.name,
           formData.location,
           formData.gpsCoordinates,

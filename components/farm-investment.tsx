@@ -234,13 +234,13 @@ export function FarmInvestment({
                 <div className="flex items-center justify-between">
                   <span className="text-sm text-gray-600">Min Investment</span>
                   <span className="text-sm font-medium">
-                    {(Number(vaultInfo.minInvestment) / 1e18).toFixed(0)} MBT
+                    {Number(vaultInfo.minInvestment) / 1e18} MBT
                   </span>
                 </div>
                 <div className="flex items-center justify-between">
                   <span className="text-sm text-gray-600">Max Investment</span>
                   <span className="text-sm font-medium">
-                    {(Number(vaultInfo.maxInvestment) / 1e18).toFixed(0)} MBT
+                    {Number(vaultInfo.maxInvestment) / 1e18} MBT
                   </span>
                 </div>
               </div>
@@ -255,7 +255,7 @@ export function FarmInvestment({
                   placeholder="Enter amount in MBT"
                   min={Number(vaultInfo.minInvestment) / 1e18}
                   max={Number(vaultInfo.maxInvestment) / 1e18}
-                  step="0.01"
+                  step="1"
                   required
                 />
               </div>

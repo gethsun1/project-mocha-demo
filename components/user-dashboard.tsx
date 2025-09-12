@@ -100,13 +100,13 @@ export function UserDashboard() {
 
   if (!isConnected) {
     return (
-      <div className="min-h-screen bg-gray-50 py-8">
+      <div className="min-h-screen coffee-gradient-light py-8">
         <div className="container mx-auto px-4">
           <div className="text-center py-16">
-            <Wallet className="h-16 w-16 text-gray-400 mx-auto mb-4" />
-            <h2 className="text-2xl font-bold text-gray-900 mb-2">Connect Your Wallet</h2>
-            <p className="text-gray-600 mb-6">Connect your wallet to view your investments and rewards</p>
-            <Button size="lg">Connect Wallet</Button>
+            <Wallet className="h-16 w-16 text-coffee-medium mx-auto mb-4" />
+            <h2 className="text-2xl font-bold text-coffee-espresso mb-2">Connect Your Wallet</h2>
+            <p className="text-coffee-mocha mb-6">Connect your wallet to view your investments and rewards</p>
+            <Button size="lg" className="coffee-hover">Connect Wallet</Button>
           </div>
         </div>
       </div>
@@ -114,11 +114,11 @@ export function UserDashboard() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 py-8">
+    <div className="min-h-screen coffee-gradient-light py-8">
       <div className="container mx-auto px-4">
         <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">Your Dashboard</h1>
-          <p className="text-gray-600">Manage your coffee farm investments and rewards</p>
+          <h1 className="text-3xl font-bold text-coffee-espresso mb-2">Your Dashboard</h1>
+          <p className="text-coffee-mocha">Manage your coffee farm investments and rewards</p>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
@@ -126,35 +126,35 @@ export function UserDashboard() {
           <div className="lg:col-span-2 space-y-6">
             {/* MBT Balance & Tree Bonds */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <Card>
+              <Card className="coffee-hover coffee-shadow border-coffee-light bg-white/90">
                 <CardHeader className="pb-3">
-                  <CardTitle className="text-lg flex items-center">
-                    <DollarSign className="h-5 w-5 mr-2" />
+                  <CardTitle className="text-lg flex items-center text-coffee-espresso">
+                    <DollarSign className="h-5 w-5 mr-2 text-coffee-medium" />
                     MBT Balance
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <div className="text-3xl font-bold text-green-600">
+                  <div className="text-3xl font-bold text-coffee-medium">
                     {formatBalance(mbtBalance)} MBT
                   </div>
-                  <p className="text-sm text-gray-500 mt-1">
+                  <p className="text-sm text-coffee-mocha mt-1">
                     Available for investment
                   </p>
                 </CardContent>
               </Card>
 
-              <Card>
+              <Card className="coffee-hover coffee-shadow border-coffee-light bg-white/90">
                 <CardHeader className="pb-3">
-                  <CardTitle className="text-lg flex items-center">
-                    <TreePine className="h-5 w-5 mr-2" />
+                  <CardTitle className="text-lg flex items-center text-coffee-espresso">
+                    <TreePine className="h-5 w-5 mr-2 text-coffee-medium" />
                     Tree Bonds
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <div className="text-3xl font-bold text-blue-600">
+                  <div className="text-3xl font-bold text-coffee-medium">
                     {formatBalance(treeBonds)} trees
                   </div>
-                  <p className="text-sm text-gray-500 mt-1">
+                  <p className="text-sm text-coffee-mocha mt-1">
                     Staked for rewards
                   </p>
                 </CardContent>
@@ -162,28 +162,29 @@ export function UserDashboard() {
             </div>
 
             {/* Rewards Section */}
-            <Card>
+            <Card className="coffee-hover coffee-shadow border-coffee-light bg-white/90">
               <CardHeader>
-                <CardTitle className="flex items-center">
-                  <Award className="h-5 w-5 mr-2" />
+                <CardTitle className="flex items-center text-coffee-espresso">
+                  <Award className="h-5 w-5 mr-2 text-coffee-medium" />
                   Rewards & Staking
                 </CardTitle>
-                <CardDescription>
+                <CardDescription className="text-coffee-mocha">
                   Manage your tree bonds and claim rewards
                 </CardDescription>
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
-                  <div className="flex items-center justify-between p-4 bg-green-50 rounded-lg">
+                  <div className="flex items-center justify-between p-4 bg-coffee-light/10 rounded-lg border border-coffee-light">
                     <div>
-                      <div className="font-semibold text-green-800">Pending Rewards</div>
-                      <div className="text-2xl font-bold text-green-600">
+                      <div className="font-semibold text-coffee-espresso">Pending Rewards</div>
+                      <div className="text-2xl font-bold text-coffee-medium">
                         {userRewards} MBT
                       </div>
                     </div>
                     <Button 
                       onClick={handleClaimRewards}
                       disabled={isPending || isConfirming || parseFloat(userRewards) === 0}
+                      className="coffee-hover"
                     >
                       {isPending || isConfirming ? (
                         <>
@@ -196,7 +197,7 @@ export function UserDashboard() {
                     </Button>
                   </div>
 
-                  <div className="text-sm text-gray-600">
+                  <div className="text-sm text-coffee-mocha">
                     <p>• Tree bonds earn 10% annual yield</p>
                     <p>• Rewards are calculated based on staking duration</p>
                     <p>• Unstaked MBTs older than 1 year are auto-redeemed</p>

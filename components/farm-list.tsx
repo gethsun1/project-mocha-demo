@@ -115,10 +115,10 @@ export function FarmList() {
     <section id="farms" className="py-20 px-4">
       <div className="container mx-auto">
         <div className="text-center mb-16">
-          <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">
+          <h2 className="text-3xl md:text-4xl font-bold text-coffee-espresso mb-4">
             Available Coffee Farms
           </h2>
-          <p className="text-xl text-gray-600 max-w-3xl mx-auto">
+          <p className="text-xl text-coffee-mocha max-w-3xl mx-auto">
             Choose from our carefully selected coffee farms around the world. 
             Each farm offers unique characteristics and investment opportunities.
           </p>
@@ -126,9 +126,10 @@ export function FarmList() {
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
           {farms.map((farm) => (
-            <Card key={farm.id} className="overflow-hidden hover:shadow-lg transition-shadow">
-              <div className="h-48 bg-gradient-to-br from-green-400 to-green-600 flex items-center justify-center">
-                <TreePine className="h-16 w-16 text-white" />
+            <Card key={farm.id} className="overflow-hidden coffee-hover coffee-shadow border-coffee-light bg-white/90">
+              <div className="h-48 coffee-gradient flex items-center justify-center relative">
+                <div className="absolute inset-0 bg-coffee-espresso/20"></div>
+                <TreePine className="h-16 w-16 text-white relative z-10" />
               </div>
               
               <CardHeader>
@@ -150,46 +151,46 @@ export function FarmList() {
                 <div className="space-y-4">
                   {/* APY */}
                   <div className="flex items-center justify-between">
-                    <span className="text-sm text-gray-600">Annual Yield</span>
-                    <span className="font-semibold text-green-600">{farm.apy}% APY</span>
+                    <span className="text-sm text-coffee-mocha">Annual Yield</span>
+                    <span className="font-semibold text-coffee-medium">{farm.apy}% APY</span>
                   </div>
 
                   {/* Maturity */}
                   <div className="flex items-center justify-between">
-                    <span className="text-sm text-gray-600">Maturity</span>
-                    <span className="font-semibold">{farm.maturity}</span>
+                    <span className="text-sm text-coffee-mocha">Maturity</span>
+                    <span className="font-semibold text-coffee-espresso">{farm.maturity}</span>
                   </div>
 
                   {/* Investment Stats */}
-                  <div className="grid grid-cols-2 gap-4 pt-4 border-t">
+                  <div className="grid grid-cols-2 gap-4 pt-4 border-t border-coffee-light">
                     <div className="text-center">
                       <div className="flex items-center justify-center mb-1">
-                        <DollarSign className="h-4 w-4 text-gray-500 mr-1" />
-                        <span className="text-sm text-gray-600">Investment</span>
+                        <DollarSign className="h-4 w-4 text-coffee-medium mr-1" />
+                        <span className="text-sm text-coffee-mocha">Investment</span>
                       </div>
-                      <span className="font-semibold">${farm.totalInvestment.toLocaleString()}</span>
+                      <span className="font-semibold text-coffee-espresso">${farm.totalInvestment.toLocaleString()}</span>
                     </div>
                     <div className="text-center">
                       <div className="flex items-center justify-center mb-1">
-                        <TreePine className="h-4 w-4 text-gray-500 mr-1" />
-                        <span className="text-sm text-gray-600">Trees</span>
+                        <TreePine className="h-4 w-4 text-coffee-medium mr-1" />
+                        <span className="text-sm text-coffee-mocha">Trees</span>
                       </div>
-                      <span className="font-semibold">{farm.totalTrees.toLocaleString()}</span>
+                      <span className="font-semibold text-coffee-espresso">{farm.totalTrees.toLocaleString()}</span>
                     </div>
                   </div>
 
                   {/* Investors */}
                   <div className="flex items-center justify-between pt-2">
                     <div className="flex items-center">
-                      <Users className="h-4 w-4 text-gray-500 mr-1" />
-                      <span className="text-sm text-gray-600">{farm.investorCount} investors</span>
+                      <Users className="h-4 w-4 text-coffee-medium mr-1" />
+                      <span className="text-sm text-coffee-mocha">{farm.investorCount} investors</span>
                     </div>
                   </div>
 
                   {/* Action Buttons */}
                   <div className="flex gap-2 pt-4">
                     <Button 
-                      className="flex-1" 
+                      className="flex-1 coffee-hover" 
                       disabled={!isConnected}
                       onClick={() => {
                         // This would open a modal or navigate to investment page
@@ -198,7 +199,7 @@ export function FarmList() {
                     >
                       {isConnected ? "Invest Now" : "Connect Wallet"}
                     </Button>
-                    <Button variant="outline" className="flex-1">
+                    <Button variant="outline" className="flex-1 coffee-hover coffee-border">
                       View Details
                     </Button>
                   </div>
@@ -210,8 +211,8 @@ export function FarmList() {
 
         {!isConnected && (
           <div className="text-center mt-12">
-            <p className="text-gray-600 mb-4">Connect your wallet to start investing in coffee farms</p>
-            <Button size="lg">Connect Wallet</Button>
+            <p className="text-coffee-mocha mb-4">Connect your wallet to start investing in coffee farms</p>
+            <Button size="lg" className="coffee-hover">Connect Wallet</Button>
           </div>
         )}
       </div>

@@ -19,10 +19,10 @@ export function CreateFarmForm() {
     totalArea: '',
     treeCapacity: '',
     metadataURI: '',
-    apy: '1200', // 12% in basis points
-    maturity: '157788000', // 5 years in seconds
-    minInvestment: '100000000000000000000', // 100 MBT (18 decimals)
-    maxInvestment: '2000000000000000000000' // 2000 MBT (18 decimals)
+    apy: '12', // 12% (will convert to basis points)
+    maturity: '5', // 5 years (will convert to seconds)
+    minInvestment: '100', // 100 MBT (will convert to wei)
+    maxInvestment: '2000' // 2000 MBT (will convert to wei)
   })
 
   const { writeContract, data: hash, isPending, error } = useWriteContract()
@@ -47,6 +47,12 @@ export function CreateFarmForm() {
     }
 
     try {
+      // Convert user-friendly values to contract format
+      const apyBasisPoints = BigInt(parseFloat(formData.apy) * 100) // Convert percentage to basis points
+      const maturitySeconds = BigInt(parseFloat(formData.maturity) * 365 * 24 * 60 * 60) // Convert years to seconds
+      const minInvestmentWei = BigInt(parseFloat(formData.minInvestment) * 1e18) // Convert MBT to wei
+      const maxInvestmentWei = BigInt(parseFloat(formData.maxInvestment) * 1e18) // Convert MBT to wei
+
       writeContract({
         address: CONTRACT_ADDRESSES.FarmManager,
         abi: FARM_MANAGER_ABI,
@@ -59,10 +65,10 @@ export function CreateFarmForm() {
           BigInt(formData.totalArea),
           BigInt(formData.treeCapacity),
           formData.metadataURI,
-          BigInt(formData.apy),
-          BigInt(formData.maturity),
-          BigInt(formData.minInvestment),
-          BigInt(formData.maxInvestment)
+          apyBasisPoints,
+          maturitySeconds,
+          minInvestmentWei,
+          maxInvestmentWei
         ],
       })
     } catch (err) {
@@ -194,57 +200,71 @@ export function CreateFarmForm() {
             
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <Label htmlFor="apy">APY (basis points)</Label>
+                <Label htmlFor="apy">Annual Percentage Yield (%)</Label>
                 <Input
                   id="apy"
                   name="apy"
                   type="number"
                   value={formData.apy}
                   onChange={handleInputChange}
-                  placeholder="1200 (12%)"
+                  placeholder="12"
+                  min="1"
+                  max="50"
+                  step="0.1"
                   required
                 />
+                <p className="text-sm text-gray-500 mt-1">Enter APY as percentage (e.g., 12 for 12%)</p>
               </div>
               
               <div>
-                <Label htmlFor="maturity">Maturity (seconds)</Label>
+                <Label htmlFor="maturity">Maturity Period (years)</Label>
                 <Input
                   id="maturity"
                   name="maturity"
                   type="number"
                   value={formData.maturity}
                   onChange={handleInputChange}
-                  placeholder="157788000 (5 years)"
+                  placeholder="5"
+                  min="1"
+                  max="10"
+                  step="0.5"
                   required
                 />
+                <p className="text-sm text-gray-500 mt-1">Investment maturity in years</p>
               </div>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <Label htmlFor="minInvestment">Min Investment (MBT)</Label>
+                <Label htmlFor="minInvestment">Minimum Investment (MBT)</Label>
                 <Input
                   id="minInvestment"
                   name="minInvestment"
                   type="number"
                   value={formData.minInvestment}
                   onChange={handleInputChange}
-                  placeholder="100000000000000000000 (100 MBT)"
+                  placeholder="100"
+                  min="1"
+                  step="1"
                   required
                 />
+                <p className="text-sm text-gray-500 mt-1">Minimum investment amount in MBT tokens</p>
               </div>
               
               <div>
-                <Label htmlFor="maxInvestment">Max Investment (MBT)</Label>
+                <Label htmlFor="maxInvestment">Maximum Investment (MBT)</Label>
                 <Input
                   id="maxInvestment"
                   name="maxInvestment"
                   type="number"
                   value={formData.maxInvestment}
                   onChange={handleInputChange}
-                  placeholder="2000000000000000000000 (2000 MBT)"
+                  placeholder="2000"
+                  min="1"
+                  step="1"
                   required
                 />
+                <p className="text-sm text-gray-500 mt-1">Maximum investment amount in MBT tokens</p>
               </div>
             </div>
           </div>

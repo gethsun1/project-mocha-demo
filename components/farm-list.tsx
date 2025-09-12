@@ -4,103 +4,14 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { MapPin, TreePine, DollarSign, Clock, Users } from 'lucide-react'
-import { useAccount, useReadContract } from 'wagmi'
-import { useState, useEffect } from 'react'
-import { CONTRACT_ADDRESSES, FARM_MANAGER_ABI, LAND_TOKEN_ABI, VAULT_ABI } from '@/lib/contracts'
+import { useAccount } from 'wagmi'
 import { FarmInvestment } from './farm-investment'
+import { useFarms } from '@/hooks/useFarms'
 
-// Mock data for demonstration
-const mockFarms = [
-  {
-    id: 1,
-    name: "Ethiopian Highlands Farm",
-    location: "Yirgacheffe, Ethiopia",
-    apy: 14,
-    maturity: "5 years",
-    totalInvestment: 125000,
-    totalTrees: 2000,
-    investorCount: 45,
-    isActive: true,
-    image: "/api/placeholder/400/300"
-  },
-  {
-    id: 2,
-    name: "Colombian Mountain Farm",
-    location: "Huila, Colombia",
-    apy: 12,
-    maturity: "3 years",
-    totalInvestment: 87500,
-    totalTrees: 1500,
-    investorCount: 32,
-    isActive: true,
-    image: "/api/placeholder/400/300"
-  },
-  {
-    id: 3,
-    name: "Guatemalan Volcanic Farm",
-    location: "Antigua, Guatemala",
-    apy: 16,
-    maturity: "4 years",
-    totalInvestment: 95000,
-    totalTrees: 1800,
-    investorCount: 28,
-    isActive: true,
-    image: "/api/placeholder/400/300"
-  }
-]
 
 export function FarmList() {
   const { address, isConnected } = useAccount()
-  const [farms, setFarms] = useState<any[]>([])
-  const [loading, setLoading] = useState(true)
-
-  // Get all farm IDs from the contract
-  const { data: farmIds, isLoading: farmIdsLoading } = useReadContract({
-    address: CONTRACT_ADDRESSES.FarmManager,
-    abi: FARM_MANAGER_ABI,
-    functionName: 'getAllFarms',
-  })
-
-  // Fetch farm data for all farms using wagmi hooks
-  useEffect(() => {
-    if (!farmIds || farmIds.length === 0) {
-      setFarms([])
-      setLoading(false)
-      return
-    }
-
-    setLoading(true)
-    const fetchFarmData = async () => {
-      const farmsData = []
-      
-      for (const farmId of farmIds) {
-        try {
-          // We'll create a simple farm object with basic data
-          // In a real implementation, you'd use multiple useReadContract hooks
-          const farm = {
-            id: Number(farmId),
-            name: `Farm #${farmId}`,
-            location: "Location TBD",
-            apy: 12, // Default APY
-            maturity: "5 years", // Default maturity
-            totalInvestment: 0,
-            totalTrees: 0,
-            investorCount: 0,
-            isActive: true,
-            image: "/api/placeholder/400/300"
-          }
-          farmsData.push(farm)
-        } catch (error) {
-          console.error(`Error fetching data for farm ${farmId}:`, error)
-        }
-      }
-
-      setFarms(farmsData)
-      setLoading(false)
-    }
-
-    fetchFarmData()
-  }, [farmIds])
+  const { farms, loading, farmCount } = useFarms()
 
   // Show loading state
   if (loading) {
@@ -135,7 +46,7 @@ export function FarmList() {
             Each farm offers unique characteristics and investment opportunities.
           </p>
           <p className="text-lg text-coffee-medium font-semibold">
-            {farms.length} farm{farms.length !== 1 ? 's' : ''} available
+            {farmCount} farm{farmCount !== 1 ? 's' : ''} available
           </p>
         </div>
 

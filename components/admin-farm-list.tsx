@@ -6,117 +6,88 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { MapPin, TreePine, DollarSign, Users, Calendar, Settings } from 'lucide-react'
-
-// Contract ABIs
-const FARM_MANAGER_ABI = [
-  {
-    "inputs": [],
-    "name": "getAllFarms",
-    "outputs": [{"internalType": "uint256[]", "name": "", "type": "uint256[]"}],
-    "stateMutability": "view",
-    "type": "function"
-  },
-  {
-    "inputs": [{"internalType": "uint256", "name": "farmId", "type": "uint256"}],
-    "name": "getFarmStats",
-    "outputs": [
-      {"internalType": "uint256", "name": "totalInvestment", "type": "uint256"},
-      {"internalType": "uint256", "name": "totalTrees", "type": "uint256"},
-      {"internalType": "uint256", "name": "investorCount", "type": "uint256"}
-    ],
-    "stateMutability": "view",
-    "type": "function"
-  }
-]
-
-const LAND_TOKEN_ABI = [
-  {
-    "inputs": [{"internalType": "uint256", "name": "tokenId", "type": "uint256"}],
-    "name": "getFarmData",
-    "outputs": [
-      {
-        "components": [
-          {"internalType": "string", "name": "name", "type": "string"},
-          {"internalType": "string", "name": "location", "type": "string"},
-          {"internalType": "string", "name": "gpsCoordinates", "type": "string"},
-          {"internalType": "uint256", "name": "totalArea", "type": "uint256"},
-          {"internalType": "uint256", "name": "treeCapacity", "type": "uint256"},
-          {"internalType": "uint256", "name": "currentTrees", "type": "uint256"},
-          {"internalType": "uint256", "name": "creationTime", "type": "uint256"},
-          {"internalType": "address", "name": "farmer", "type": "address"},
-          {"internalType": "bool", "name": "isActive", "type": "bool"},
-          {"internalType": "string", "name": "metadataURI", "type": "string"}
-        ],
-        "internalType": "struct MochaLandToken.FarmData",
-        "name": "",
-        "type": "tuple"
-      }
-    ],
-    "stateMutability": "view",
-    "type": "function"
-  }
-]
-
-// Mock data for demonstration
-const mockFarms = [
-  {
-    id: 1,
-    name: "Ethiopian Highlands Farm",
-    location: "Yirgacheffe, Ethiopia",
-    gpsCoordinates: "6.8417,38.2051",
-    totalArea: 10000,
-    treeCapacity: 2000,
-    currentTrees: 1500,
-    totalInvestment: 125000,
-    investorCount: 45,
-    isActive: true,
-    creationTime: 1690123456,
-    farmer: "0x742d35Cc6634C0532925a3b8D0C4E4C4C4C4C4C4C4",
-    metadataURI: "https://metadata.projectmocha.com/farm/1"
-  },
-  {
-    id: 2,
-    name: "Colombian Mountain Farm",
-    location: "Huila, Colombia",
-    gpsCoordinates: "2.4600,-75.6000",
-    totalArea: 8000,
-    treeCapacity: 1500,
-    currentTrees: 1200,
-    totalInvestment: 87500,
-    investorCount: 32,
-    isActive: true,
-    creationTime: 1690123456,
-    farmer: "0x742d35Cc6634C0532925a3b8D0C4E4C4C4C4C4C4C4",
-    metadataURI: "https://metadata.projectmocha.com/farm/2"
-  },
-  {
-    id: 3,
-    name: "Guatemalan Volcanic Farm",
-    location: "Antigua, Guatemala",
-    gpsCoordinates: "14.5500,-90.7333",
-    totalArea: 12000,
-    treeCapacity: 1800,
-    currentTrees: 1800,
-    totalInvestment: 95000,
-    investorCount: 28,
-    isActive: false,
-    creationTime: 1690123456,
-    farmer: "0x742d35Cc6634C0532925a3b8D0C4E4C4C4C4C4C4C4",
-    metadataURI: "https://metadata.projectmocha.com/farm/3"
-  }
-]
+import { CONTRACT_ADDRESSES, FARM_MANAGER_ABI, LAND_TOKEN_ABI } from '@/lib/contracts'
 
 export function AdminFarmList() {
   const { address, isConnected } = useAccount()
-  const [farms, setFarms] = useState(mockFarms)
-  const [loading, setLoading] = useState(false)
+  const [farms, setFarms] = useState<any[]>([])
+  const [loading, setLoading] = useState(true)
 
-  // TODO: Replace with actual contract calls
-  // const { data: farmIds } = useReadContract({
-  //   address: '0x...', // Farm Manager contract address
-  //   abi: FARM_MANAGER_ABI,
-  //   functionName: 'getAllFarms',
-  // })
+  // Get all farm IDs from the contract
+  const { data: farmIds, isLoading: farmIdsLoading } = useReadContract({
+    address: CONTRACT_ADDRESSES.FarmManager,
+    abi: FARM_MANAGER_ABI,
+    functionName: 'getAllFarms',
+  })
+
+  // Fetch detailed farm data for each farm
+  useEffect(() => {
+    const fetchFarmDetails = async () => {
+      if (!farmIds || farmIds.length === 0) {
+        setFarms([])
+        setLoading(false)
+        return
+      }
+
+      setLoading(true)
+      const farmsData = []
+
+      for (const farmId of farmIds) {
+        try {
+          // Fetch farm data from Land Token contract
+          const farmDataResponse = await fetch(`/api/farm-data?farmId=${farmId}`)
+          if (farmDataResponse.ok) {
+            const farmData = await farmDataResponse.json()
+            farmsData.push(farmData)
+          } else {
+            // Fallback: create basic farm object if API fails
+            const farm = {
+              id: Number(farmId),
+              name: `Coffee Farm #${farmId}`,
+              location: "Blockchain Farm",
+              gpsCoordinates: "0.0000, 0.0000",
+              totalArea: 1000,
+              treeCapacity: 1000,
+              currentTrees: 0,
+              totalInvestment: 0,
+              investorCount: 0,
+              isActive: true,
+              creationTime: Math.floor(Date.now() / 1000),
+              farmer: "0x0000...0000",
+              metadataURI: ""
+            }
+            farmsData.push(farm)
+          }
+        } catch (error) {
+          console.error(`Error fetching data for farm ${farmId}:`, error)
+          // Create fallback farm data
+          const farm = {
+            id: Number(farmId),
+            name: `Coffee Farm #${farmId}`,
+            location: "Blockchain Farm",
+            gpsCoordinates: "0.0000, 0.0000",
+            totalArea: 1000,
+            treeCapacity: 1000,
+            currentTrees: 0,
+            totalInvestment: 0,
+            investorCount: 0,
+            isActive: true,
+            creationTime: Math.floor(Date.now() / 1000),
+            farmer: "0x0000...0000",
+            metadataURI: ""
+          }
+          farmsData.push(farm)
+        }
+      }
+
+      setFarms(farmsData)
+      setLoading(false)
+    }
+
+    if (!farmIdsLoading) {
+      fetchFarmDetails()
+    }
+  }, [farmIds, farmIdsLoading])
 
   const formatDate = (timestamp: number) => {
     return new Date(timestamp * 1000).toLocaleDateString()
@@ -141,6 +112,23 @@ export function AdminFarmList() {
           <div className="text-center py-8">
             <p className="text-gray-600 mb-4">Please connect your wallet to access admin features</p>
             <Button>Connect Wallet</Button>
+          </div>
+        </CardContent>
+      </Card>
+    )
+  }
+
+  if (loading) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle>Farm Management</CardTitle>
+          <CardDescription>Loading farms from blockchain...</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="text-center py-8">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-coffee-espresso mx-auto mb-4"></div>
+            <p className="text-gray-600">Fetching farm data...</p>
           </div>
         </CardContent>
       </Card>
@@ -191,7 +179,7 @@ export function AdminFarmList() {
                     </div>
                     <div className="flex justify-between">
                       <span className="text-sm text-gray-600">Area:</span>
-                      <span className="text-sm">{farm.totalArea.toLocaleString()} m²</span>
+                      <span className="text-sm">{(farm.totalArea || 0).toLocaleString()} m²</span>
                     </div>
                     <div className="flex justify-between">
                       <span className="text-sm text-gray-600">Farmer:</span>
@@ -210,22 +198,22 @@ export function AdminFarmList() {
                   <div className="space-y-2">
                     <div className="flex justify-between">
                       <span className="text-sm text-gray-600">Current:</span>
-                      <span className="text-sm font-semibold">{farm.currentTrees.toLocaleString()}</span>
+                      <span className="text-sm font-semibold">{(farm.currentTrees || 0).toLocaleString()}</span>
                     </div>
                     <div className="flex justify-between">
                       <span className="text-sm text-gray-600">Capacity:</span>
-                      <span className="text-sm">{farm.treeCapacity.toLocaleString()}</span>
+                      <span className="text-sm">{(farm.treeCapacity || 0).toLocaleString()}</span>
                     </div>
                     <div className="flex justify-between">
                       <span className="text-sm text-gray-600">Utilization:</span>
                       <span className="text-sm font-semibold">
-                        {getUtilizationPercentage(farm.currentTrees, farm.treeCapacity)}%
+                        {getUtilizationPercentage(farm.currentTrees || 0, farm.treeCapacity || 1)}%
                       </span>
                     </div>
                     <div className="w-full bg-gray-200 rounded-full h-2">
                       <div 
                         className="bg-green-600 h-2 rounded-full" 
-                        style={{ width: `${getUtilizationPercentage(farm.currentTrees, farm.treeCapacity)}%` }}
+                        style={{ width: `${getUtilizationPercentage(farm.currentTrees || 0, farm.treeCapacity || 1)}%` }}
                       ></div>
                     </div>
                   </div>
@@ -237,16 +225,16 @@ export function AdminFarmList() {
                   <div className="space-y-2">
                     <div className="flex justify-between">
                       <span className="text-sm text-gray-600">Total:</span>
-                      <span className="text-sm font-semibold">${farm.totalInvestment.toLocaleString()}</span>
+                      <span className="text-sm font-semibold">${(farm.totalInvestment || 0).toLocaleString()}</span>
                     </div>
                     <div className="flex justify-between">
                       <span className="text-sm text-gray-600">Investors:</span>
-                      <span className="text-sm">{farm.investorCount}</span>
+                      <span className="text-sm">{farm.investorCount || 0}</span>
                     </div>
                     <div className="flex justify-between">
                       <span className="text-sm text-gray-600">Avg/Investor:</span>
                       <span className="text-sm">
-                        ${Math.round(farm.totalInvestment / farm.investorCount).toLocaleString()}
+                        ${Math.round((farm.totalInvestment || 0) / (farm.investorCount || 1)).toLocaleString()}
                       </span>
                     </div>
                   </div>

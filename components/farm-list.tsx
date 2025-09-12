@@ -87,13 +87,13 @@ export function FarmList() {
                   {/* APY */}
                   <div className="flex items-center justify-between">
                     <span className="text-sm text-coffee-mocha">Annual Yield</span>
-                    <span className="font-semibold text-coffee-medium">{farm.apy}% APY</span>
+                    <span className="font-semibold text-coffee-medium">{farm.apy || 12}% APY</span>
                   </div>
 
                   {/* Maturity */}
                   <div className="flex items-center justify-between">
                     <span className="text-sm text-coffee-mocha">Maturity</span>
-                    <span className="font-semibold text-coffee-espresso">{farm.maturity}</span>
+                    <span className="font-semibold text-coffee-espresso">{farm.maturity || "5 years"}</span>
                   </div>
 
                   {/* Investment Stats */}
@@ -103,14 +103,14 @@ export function FarmList() {
                         <DollarSign className="h-4 w-4 text-coffee-medium mr-1" />
                         <span className="text-sm text-coffee-mocha">Investment</span>
                       </div>
-                      <span className="font-semibold text-coffee-espresso">${farm.totalInvestment.toLocaleString()}</span>
+                      <span className="font-semibold text-coffee-espresso">${(farm.totalInvestment || 0).toLocaleString()}</span>
                     </div>
                     <div className="text-center">
                       <div className="flex items-center justify-center mb-1">
                         <TreePine className="h-4 w-4 text-coffee-medium mr-1" />
                         <span className="text-sm text-coffee-mocha">Trees</span>
                       </div>
-                      <span className="font-semibold text-coffee-espresso">{farm.totalTrees.toLocaleString()}</span>
+                      <span className="font-semibold text-coffee-espresso">{(farm.totalTrees || farm.currentTrees || 0).toLocaleString()}</span>
                     </div>
                   </div>
 
@@ -118,7 +118,7 @@ export function FarmList() {
                   <div className="flex items-center justify-between pt-2">
                     <div className="flex items-center">
                       <Users className="h-4 w-4 text-coffee-medium mr-1" />
-                      <span className="text-sm text-coffee-mocha">{farm.investorCount} investors</span>
+                      <span className="text-sm text-coffee-mocha">{farm.investorCount || 0} investors</span>
                     </div>
                   </div>
 

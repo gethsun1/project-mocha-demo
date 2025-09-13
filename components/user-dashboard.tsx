@@ -6,6 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Loader2, TreePine, DollarSign, TrendingUp, Wallet, Award } from 'lucide-react'
+import { ConnectButton } from '@rainbow-me/rainbowkit'
 import { CONTRACT_ADDRESSES, BEAN_TOKEN_ABI, FARM_MANAGER_ABI, VAULT_ABI } from '@/lib/contracts'
 
 export function UserDashboard() {
@@ -45,6 +46,13 @@ export function UserDashboard() {
     args: address ? [address] : undefined,
   })
 
+  // Get all farms to fetch investment details
+  const { data: allFarms } = useReadContract({
+    address: CONTRACT_ADDRESSES.FarmManager,
+    abi: FARM_MANAGER_ABI,
+    functionName: 'getAllFarms',
+  })
+
   const { writeContract, data: hash, isPending, error } = useWriteContract()
   const { isLoading: isConfirming, isSuccess } = useWaitForTransactionReceipt({
     hash,
@@ -55,6 +63,36 @@ export function UserDashboard() {
       setUserRewards((Number(pendingRewards) / 1e18).toFixed(2))
     }
   }, [pendingRewards])
+
+  // Fetch detailed investment data
+  useEffect(() => {
+    const fetchInvestmentDetails = async () => {
+      if (!allFarms || !address) return
+
+      const investments = []
+      
+      for (const farmId of allFarms) {
+        try {
+          // Fetch farm investments for this farm
+          const farmInvestments = await fetch(`/api/farm-investments?farmId=${farmId}`)
+          if (farmInvestments.ok) {
+            const data = await farmInvestments.json()
+            // Filter investments for current user
+            const userFarmInvestments = data.filter((inv: any) => 
+              inv.investor.toLowerCase() === address.toLowerCase()
+            )
+            investments.push(...userFarmInvestments)
+          }
+        } catch (error) {
+          console.error(`Error fetching investments for farm ${farmId}:`, error)
+        }
+      }
+
+      setUserInvestments(investments)
+    }
+
+    fetchInvestmentDetails()
+  }, [allFarms, address])
 
   const handleClaimRewards = async () => {
     if (!isConnected) {
@@ -106,7 +144,7 @@ export function UserDashboard() {
             <Wallet className="h-16 w-16 text-coffee-medium mx-auto mb-4" />
             <h2 className="text-2xl font-bold text-coffee-espresso mb-2">Connect Your Wallet</h2>
             <p className="text-coffee-mocha mb-6">Connect your wallet to view your investments and rewards</p>
-            <Button size="lg" className="coffee-hover">Connect Wallet</Button>
+            <ConnectButton />
           </div>
         </div>
       </div>
@@ -215,15 +253,51 @@ export function UserDashboard() {
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                {investmentIndices && investmentIndices.length > 0 ? (
-                  <div className="space-y-3">
-                    {investmentIndices.map((index: bigint, i: number) => (
-                      <div key={i} className="flex items-center justify-between p-3 border rounded-lg">
-                        <div>
-                          <div className="font-medium">Investment #{Number(index)}</div>
-                          <div className="text-sm text-gray-500">Active investment</div>
+                {userInvestments && userInvestments.length > 0 ? (
+                  <div className="space-y-4">
+                    {userInvestments.map((investment: any, i: number) => (
+                      <div key={i} className="p-4 border rounded-lg bg-coffee-light/5">
+                        <div className="flex items-start justify-between mb-3">
+                          <div>
+                            <div className="font-semibold text-coffee-espresso">
+                              Farm #{investment.farmId} Investment
+                            </div>
+                            <div className="text-sm text-coffee-mocha">
+                              {investment.investmentDate} at {investment.investmentTime}
+                            </div>
+                          </div>
+                          <Badge variant={investment.isActive ? "default" : "secondary"}>
+                            {investment.isActive ? "Active" : "Inactive"}
+                          </Badge>
                         </div>
-                        <Badge variant="secondary">Active</Badge>
+                        
+                        <div className="grid grid-cols-2 md:grid-cols-3 gap-4 text-sm">
+                          <div>
+                            <div className="text-coffee-mocha">Trees Purchased</div>
+                            <div className="font-semibold text-coffee-espresso">
+                              {investment.treeCount} trees
+                            </div>
+                          </div>
+                          <div>
+                            <div className="text-coffee-mocha">Total Investment</div>
+                            <div className="font-semibold text-coffee-espresso">
+                              {investment.totalInvestment.toFixed(2)} MBT
+                            </div>
+                          </div>
+                          <div>
+                            <div className="text-coffee-mocha">Price per Tree</div>
+                            <div className="font-semibold text-coffee-espresso">
+                              4.00 MBT
+                            </div>
+                          </div>
+                        </div>
+                        
+                        <div className="mt-3 pt-3 border-t border-coffee-light">
+                          <div className="flex items-center text-xs text-coffee-mocha">
+                            <TreePine className="h-3 w-3 mr-1" />
+                            Investment ID: {investment.id} | Farm ID: {investment.farmId}
+                          </div>
+                        </div>
                       </div>
                     ))}
                   </div>
@@ -232,6 +306,12 @@ export function UserDashboard() {
                     <TreePine className="h-12 w-12 mx-auto mb-4 text-gray-300" />
                     <p>No investments yet</p>
                     <p className="text-sm">Start investing in coffee farms to see your portfolio here</p>
+                    <Button 
+                      className="mt-4" 
+                      onClick={() => window.location.href = '/#farms'}
+                    >
+                      Browse Farms
+                    </Button>
                   </div>
                 )}
               </CardContent>

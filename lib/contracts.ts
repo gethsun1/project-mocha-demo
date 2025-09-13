@@ -99,6 +99,29 @@ export const FARM_MANAGER_ABI = [
     "outputs": [],
     "stateMutability": "nonpayable",
     "type": "function"
+  },
+  {
+    "inputs": [
+      {"internalType": "uint256", "name": "farmId", "type": "uint256"}
+    ],
+    "name": "getFarmInvestments",
+    "outputs": [
+      {
+        "components": [
+          {"internalType": "uint256", "name": "farmId", "type": "uint256"},
+          {"internalType": "address", "name": "investor", "type": "address"},
+          {"internalType": "uint256", "name": "treeCount", "type": "uint256"},
+          {"internalType": "uint256", "name": "totalInvestment", "type": "uint256"},
+          {"internalType": "uint256", "name": "timestamp", "type": "uint256"},
+          {"internalType": "bool", "name": "isActive", "type": "bool"}
+        ],
+        "internalType": "struct FarmManager.FarmInvestment[]",
+        "name": "",
+        "type": "tuple[]"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
   }
 ] as const;
 

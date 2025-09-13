@@ -6,6 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { MapPin, TreePine, DollarSign, Users, Calendar, Settings } from 'lucide-react'
+import { ConnectButton } from '@rainbow-me/rainbowkit'
 import { CONTRACT_ADDRESSES, FARM_MANAGER_ABI, LAND_TOKEN_ABI } from '@/lib/contracts'
 
 export function AdminFarmList() {
@@ -111,7 +112,7 @@ export function AdminFarmList() {
         <CardContent>
           <div className="text-center py-8">
             <p className="text-gray-600 mb-4">Please connect your wallet to access admin features</p>
-            <Button>Connect Wallet</Button>
+            <ConnectButton />
           </div>
         </CardContent>
       </Card>

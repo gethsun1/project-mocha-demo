@@ -1,10 +1,13 @@
 'use client'
 
+import { useState } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
 import { MapPin, TreePine, DollarSign, Clock, Users } from 'lucide-react'
 import { useAccount } from 'wagmi'
+import { ConnectButton } from '@rainbow-me/rainbowkit'
 import { FarmInvestment } from './farm-investment'
 import { useFarms } from '@/hooks/useFarms'
 
@@ -12,6 +15,13 @@ import { useFarms } from '@/hooks/useFarms'
 export function FarmList() {
   const { address, isConnected } = useAccount()
   const { farms, loading, farmCount } = useFarms()
+  const [selectedFarm, setSelectedFarm] = useState<any>(null)
+  const [isInvestmentModalOpen, setIsInvestmentModalOpen] = useState(false)
+
+  const handleInvestClick = (farm: any) => {
+    setSelectedFarm(farm)
+    setIsInvestmentModalOpen(true)
+  }
 
   // Show loading state
   if (loading) {
@@ -127,10 +137,7 @@ export function FarmList() {
                     <Button 
                       className="flex-1 coffee-hover" 
                       disabled={!isConnected}
-                      onClick={() => {
-                        // This would open a modal or navigate to investment page
-                        console.log('Invest in farm:', farm.id)
-                      }}
+                      onClick={() => handleInvestClick(farm)}
                     >
                       {isConnected ? "Invest Now" : "Connect Wallet"}
                     </Button>
@@ -148,10 +155,31 @@ export function FarmList() {
         {!isConnected && (
           <div className="text-center mt-12">
             <p className="text-coffee-mocha mb-4">Connect your wallet to start investing in coffee farms</p>
-            <Button size="lg" className="coffee-hover">Connect Wallet</Button>
+            <ConnectButton />
           </div>
         )}
       </div>
+
+      {/* Investment Modal */}
+      <Dialog open={isInvestmentModalOpen} onOpenChange={setIsInvestmentModalOpen}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Invest in {selectedFarm?.name}</DialogTitle>
+          </DialogHeader>
+          {selectedFarm && (
+            <FarmInvestment
+              farmId={selectedFarm.id}
+              farmName={selectedFarm.name}
+              farmLocation={selectedFarm.location}
+              apy={selectedFarm.apy || 12}
+              maturity={selectedFarm.maturity || "5 years"}
+              totalInvestment={selectedFarm.totalInvestment || 0}
+              totalTrees={selectedFarm.totalTrees || selectedFarm.currentTrees || 0}
+              investorCount={selectedFarm.investorCount || 0}
+            />
+          )}
+        </DialogContent>
+      </Dialog>
     </section>
   )
 }

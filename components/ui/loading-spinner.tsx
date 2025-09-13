@@ -41,3 +41,4 @@ export function CoffeeLoader({ size = "md", className }: LoadingSpinnerProps) {
     </div>
   )
 }
+

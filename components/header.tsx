@@ -5,7 +5,6 @@ import Link from 'next/link'
 import { Button } from '@/components/ui/button'
 import { Coffee, Menu, X } from 'lucide-react'
 import { useState } from 'react'
-import { SimpleConnectButton } from './simple-connect-button'
 
 export function Header() {
   const [isMenuOpen, setIsMenuOpen] = useState(false)
@@ -38,7 +37,7 @@ export function Header() {
 
           {/* Wallet Connection */}
           <div className="hidden md:block">
-            <SimpleConnectButton />
+            <ConnectButton />
           </div>
 
           {/* Mobile Menu Button */}
@@ -87,7 +86,7 @@ export function Header() {
                 About
               </Link>
               <div className="pt-4">
-                <SimpleConnectButton />
+                <ConnectButton />
               </div>
             </nav>
           </div>

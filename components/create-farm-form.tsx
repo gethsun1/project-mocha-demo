@@ -7,6 +7,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Loader2, Plus } from 'lucide-react'
+import { ConnectButton } from '@rainbow-me/rainbowkit'
 import { CONTRACT_ADDRESSES, FARM_MANAGER_ABI } from '@/lib/contracts'
 
 export function CreateFarmForm() {
@@ -86,7 +87,7 @@ export function CreateFarmForm() {
         <CardContent>
           <div className="text-center py-8">
             <p className="text-gray-600 mb-4">Please connect your wallet to access admin features</p>
-            <Button>Connect Wallet</Button>
+            <ConnectButton />
           </div>
         </CardContent>
       </Card>

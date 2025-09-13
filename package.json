@@ -10,7 +10,9 @@
     "lint": "next lint",
     "compile": "hardhat compile",
     "deploy": "hardhat run scripts/deploy.js --network scrollSepolia",
-    "verify": "hardhat verify --network scrollSepolia"
+    "verify": "hardhat verify --network scrollSepolia",
+    "mint-tokens": "hardhat run scripts/mint-test-tokens.js --network scrollSepolia",
+    "test-farm": "hardhat run scripts/test-farm.js --network scrollSepolia"
   },
   "dependencies": {
     "@openzeppelin/contracts": "^4.9.6",

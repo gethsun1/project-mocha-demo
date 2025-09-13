@@ -175,6 +175,7 @@ export function FarmList() {
               maturity={selectedFarm.maturity || "5 years"}
               totalInvestment={selectedFarm.totalInvestment || 0}
               totalTrees={selectedFarm.totalTrees || selectedFarm.currentTrees || 0}
+              treeCapacity={selectedFarm.treeCapacity || 0}
               investorCount={selectedFarm.investorCount || 0}
             />
           )}

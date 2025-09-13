@@ -12,7 +12,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge'
 import { Loader2, TreePine, DollarSign, TrendingUp } from 'lucide-react'
 import { ConnectButton } from '@rainbow-me/rainbowkit'
-import { CONTRACT_ADDRESSES, FARM_MANAGER_ABI, VAULT_ABI, BEAN_TOKEN_ABI } from '@/lib/contracts'
+import { CONTRACT_ADDRESSES, FARM_MANAGER_ABI, VAULT_ABI, BEAN_TOKEN_ABI, LAND_TOKEN_ABI } from '@/lib/contracts'
 
 interface FarmInvestmentProps {
   farmId: number
@@ -22,6 +22,7 @@ interface FarmInvestmentProps {
   maturity: string
   totalInvestment: number
   totalTrees: number
+  treeCapacity: number
   investorCount: number
 }
 
@@ -33,6 +34,7 @@ export function FarmInvestment({
   maturity, 
   totalInvestment, 
   totalTrees, 
+  treeCapacity,
   investorCount 
 }: FarmInvestmentProps) {
   const { address, isConnected } = useAccount()
@@ -83,6 +85,21 @@ export function FarmInvestment({
     args: [BigInt(farmId)],
   })
 
+  // Get farm data to validate farm exists
+  const { data: farmData, error: farmDataError } = useReadContract({
+    address: CONTRACT_ADDRESSES.MochaLandToken,
+    abi: LAND_TOKEN_ABI,
+    functionName: 'getFarmData',
+    args: [BigInt(farmId)],
+  })
+
+  // Get total farms count
+  const { data: totalFarms } = useReadContract({
+    address: CONTRACT_ADDRESSES.MochaLandToken,
+    abi: LAND_TOKEN_ABI,
+    functionName: 'getTotalFarms',
+  })
+
   // Get user's vault shares
   const { data: userShares } = useReadContract({
     address: CONTRACT_ADDRESSES.MochaVault,
@@ -108,6 +125,7 @@ export function FarmInvestment({
   const [approvalHash, setApprovalHash] = useState<string | null>(null)
   const [isProcessing, setIsProcessing] = useState(false)
   const [lastRefresh, setLastRefresh] = useState(Date.now())
+  const [transactionType, setTransactionType] = useState<'approval' | 'purchase' | null>(null)
 
   // Handle approval transaction completion and auto-proceed with purchase
   useEffect(() => {
@@ -121,15 +139,15 @@ export function FarmInvestment({
           // Wait for the approval transaction to be mined
           const receipt = await publicClient.waitForTransactionReceipt({
             hash: hash as `0x${string}`,
-            timeout: 60000 // 60 seconds timeout
+            timeout: 120000 // 2 minutes timeout
           })
           
           if (receipt.status === 'success') {
             console.log('Approval confirmed, proceeding with purchase...')
             setIsApproving(false)
             
-            // Small delay to ensure the allowance is updated
-            await new Promise(resolve => setTimeout(resolve, 1000))
+            // Wait a bit longer to ensure the allowance is updated on-chain
+            await new Promise(resolve => setTimeout(resolve, 5000))
             
             // Proceed with the purchase
             const treeCountNum = parseInt(treeCount)
@@ -138,43 +156,75 @@ export function FarmInvestment({
               treeCount: treeCountNum
             })
             
-            // Try with manual gas estimation as fallback
+            // Proceed with purchase using manual gas estimation
+            setTransactionType('purchase')
+            
             try {
-              console.log('Attempting purchase with manual gas estimation...')
-              writeContract({
-                address: CONTRACT_ADDRESSES.FarmManager,
-                abi: FARM_MANAGER_ABI,
-                functionName: 'purchaseTrees',
-                args: [BigInt(farmId), BigInt(treeCountNum)],
-                gas: BigInt(500000), // Manual gas limit
-              })
-            } catch (gasError) {
-              console.error('First gas estimation failed, trying with higher gas limit:', gasError)
-              try {
-                // Try with higher gas limit
-                writeContract({
-                  address: CONTRACT_ADDRESSES.FarmManager,
-                  abi: FARM_MANAGER_ABI,
-                  functionName: 'purchaseTrees',
-                  args: [BigInt(farmId), BigInt(treeCountNum)],
-                  gas: BigInt(1000000), // Higher gas limit
-                })
-              } catch (finalError) {
-                console.error('All gas estimation attempts failed:', finalError)
-                alert('Transaction failed. Please try again or contact support.')
-                setIsProcessing(false)
-                setIsApproving(false)
+              // Try multiple gas strategies for purchase after approval
+              const gasStrategies = [
+                { gas: BigInt(1000000), name: 'High gas (1M)' },
+                { gas: BigInt(800000), name: 'Medium gas (800K)' },
+                { gas: BigInt(500000), name: 'Low gas (500K)' },
+                { gas: undefined, name: 'Auto gas estimation' }
+              ]
+
+              let lastError = null
+              let success = false
+
+              for (const strategy of gasStrategies) {
+                try {
+                  console.log(`Trying purchase after approval with ${strategy.name}...`)
+                  
+                  const contractCall: any = {
+                    address: CONTRACT_ADDRESSES.FarmManager,
+                    abi: FARM_MANAGER_ABI,
+                    functionName: 'purchaseTrees',
+                    args: [BigInt(farmId), BigInt(treeCountNum)],
+                    ...(strategy.gas && { gas: strategy.gas })
+                  }
+
+                  writeContract(contractCall as any)
+                  success = true
+                  console.log(`✅ Purchase after approval submitted with ${strategy.name}`)
+                  break
+                } catch (strategyError) {
+                  console.error(`❌ Failed with ${strategy.name}:`, strategyError)
+                  lastError = strategyError
+                  continue
+                }
               }
+
+              if (!success) {
+                throw lastError || new Error('All gas strategies failed after approval')
+              }
+            } catch (purchaseError: any) {
+              console.error('Error in purchase after approval:', purchaseError)
+              
+              let errorMessage = 'Error purchasing trees after approval: ' + (purchaseError?.message || 'Unknown error')
+              
+              if (purchaseError?.message?.includes('missing revert data')) {
+                errorMessage = 'Contract call failed after approval. This might be due to:\n' +
+                  '1. Farm not properly initialized\n' +
+                  '2. Contract state issues\n' +
+                  '3. Network connectivity problems\n\n' +
+                  'Please try refreshing the page and ensure the farm exists.'
+              }
+              
+              alert(errorMessage)
+              setIsProcessing(false)
+              setTransactionType(null)
             }
           } else {
             console.error('Approval transaction failed')
             setIsApproving(false)
             setIsProcessing(false)
+            setTransactionType(null)
           }
         } catch (err) {
           console.error('Error waiting for approval:', err)
           setIsApproving(false)
           setIsProcessing(false)
+          setTransactionType(null)
         }
       }
       
@@ -184,22 +234,24 @@ export function FarmInvestment({
 
   // Handle successful investment - refresh data and redirect to dashboard
   useEffect(() => {
-    if (isSuccess) {
-      // Refresh farm data after successful transaction
+    if (isSuccess && transactionType === 'purchase') {
+      // Only redirect if this was a purchase transaction, not an approval
+      console.log('Purchase transaction successful, refreshing data...')
       refreshFarmData()
       
       // Wait a moment for the transaction to be fully processed
       setTimeout(() => {
         router.push('/dashboard')
-      }, 2000)
+      }, 3000)
     }
-  }, [isSuccess, router])
+  }, [isSuccess, transactionType, router])
 
   // Reset processing state on error
   useEffect(() => {
     if (error) {
       setIsProcessing(false)
       setIsApproving(false)
+      setTransactionType(null)
     }
   }, [error])
 
@@ -218,6 +270,31 @@ export function FarmInvestment({
       return
     }
 
+    // Validate farm exists
+    if (!farmData) {
+      alert('Farm data not found. Please refresh the page and try again.')
+      return
+    }
+
+    if (farmDataError) {
+      alert('Error loading farm data: ' + farmDataError.message)
+      return
+    }
+
+    // Check if farm is active
+    if (!farmData.isActive) {
+      alert('This farm is not active and cannot accept investments.')
+      return
+    }
+
+    // Check farm capacity
+    const currentTrees = Number(farmData.currentTrees || 0)
+    const treeCapacity = Number(farmData.treeCapacity || 0)
+    if (currentTrees + treeCountNum > treeCapacity) {
+      alert(`Cannot purchase ${treeCountNum} trees. Farm capacity: ${treeCapacity}, Current trees: ${currentTrees}, Available: ${treeCapacity - currentTrees}`)
+      return
+    }
+
     const totalCost = treeCountNum * 4 * 1e18 // 4 MBT per tree in wei
 
     try {
@@ -230,22 +307,48 @@ export function FarmInvestment({
         return
       }
 
+      console.log('Starting tree purchase process...', {
+        farmId: farmId,
+        treeCount: treeCountNum,
+        totalCost: totalCost,
+        userBalance: mbtBalance?.toString(),
+        currentAllowance: currentAllowance?.toString(),
+        farmData: {
+          name: farmData.name,
+          isActive: farmData.isActive,
+          currentTrees: currentTrees,
+          treeCapacity: treeCapacity,
+          availableCapacity: treeCapacity - currentTrees
+        },
+        totalFarms: totalFarms?.toString()
+      })
+
       // Check if approval is needed and handle it automatically
       if (!currentAllowance || currentAllowance < BigInt(totalCost)) {
         console.log('Approval needed, requesting approval first...')
         setIsApproving(true)
+        setTransactionType('approval')
         
-        // Approve exactly the amount needed for this transaction
-        const approvalAmount = BigInt(totalCost)
+        // Approve a bit more than needed to avoid multiple approvals
+        const approvalAmount = BigInt(totalCost) + BigInt(1000 * 1e18) // Add 1000 MBT buffer
         
-        writeContract({
-          address: CONTRACT_ADDRESSES.MochaBeanToken,
-          abi: BEAN_TOKEN_ABI,
-          functionName: 'approve',
-          args: [CONTRACT_ADDRESSES.FarmManager, approvalAmount],
-        })
-        
-        console.log('Approval transaction submitted for exact amount:', approvalAmount.toString())
+        try {
+          writeContract({
+            address: CONTRACT_ADDRESSES.MochaBeanToken,
+            abi: BEAN_TOKEN_ABI,
+            functionName: 'approve',
+            args: [CONTRACT_ADDRESSES.FarmManager, approvalAmount],
+            gas: BigInt(100000), // Manual gas limit for approval
+          })
+          
+          console.log('Approval transaction submitted for amount:', approvalAmount.toString())
+        } catch (approvalError) {
+          console.error('Error submitting approval:', approvalError)
+          alert('Error submitting approval: ' + (approvalError as Error).message)
+          setIsProcessing(false)
+          setIsApproving(false)
+          return
+        }
         
         // Wait for approval to be confirmed before proceeding
         // The useEffect will handle the approval completion
@@ -253,38 +356,81 @@ export function FarmInvestment({
       }
 
       // If we have sufficient allowance, proceed with purchase
-      console.log('Purchasing trees...', {
+      console.log('Purchasing trees with existing allowance...', {
         farmId: farmId,
         treeCount: treeCountNum,
         totalCost: totalCost,
         allowance: currentAllowance?.toString()
       })
       
-      // Try with manual gas estimation as fallback
+      setTransactionType('purchase')
+      
       try {
-        await writeContract({
-          address: CONTRACT_ADDRESSES.FarmManager,
-          abi: FARM_MANAGER_ABI,
-          functionName: 'purchaseTrees',
-          args: [BigInt(farmId), BigInt(treeCountNum)],
-          gas: BigInt(500000), // Manual gas limit
-        })
-      } catch (gasError) {
-        console.error('Gas estimation failed, trying with higher gas limit:', gasError)
-        // Try with higher gas limit
-        await writeContract({
-          address: CONTRACT_ADDRESSES.FarmManager,
-          abi: FARM_MANAGER_ABI,
-          functionName: 'purchaseTrees',
-          args: [BigInt(farmId), BigInt(treeCountNum)],
-          gas: BigInt(1000000), // Higher gas limit
-        })
+        // Try multiple gas strategies
+        const gasStrategies = [
+          { gas: BigInt(1000000), name: 'High gas (1M)' },
+          { gas: BigInt(800000), name: 'Medium gas (800K)' },
+          { gas: BigInt(500000), name: 'Low gas (500K)' },
+          { gas: undefined, name: 'Auto gas estimation' }
+        ]
+
+        let lastError = null
+        let success = false
+
+        for (const strategy of gasStrategies) {
+          try {
+            console.log(`Trying purchase with ${strategy.name}...`)
+            
+            const contractCall: any = {
+              address: CONTRACT_ADDRESSES.FarmManager,
+              abi: FARM_MANAGER_ABI,
+              functionName: 'purchaseTrees',
+              args: [BigInt(farmId), BigInt(treeCountNum)],
+              ...(strategy.gas && { gas: strategy.gas })
+            }
+
+            writeContract(contractCall as any)
+            success = true
+            console.log(`✅ Purchase submitted with ${strategy.name}`)
+            break
+          } catch (strategyError) {
+            console.error(`❌ Failed with ${strategy.name}:`, strategyError)
+            lastError = strategyError
+            continue
+          }
+        }
+
+        if (!success) {
+          throw lastError || new Error('All gas strategies failed')
+        }
+      } catch (purchaseError: any) {
+        console.error('Error submitting purchase:', purchaseError)
+        
+        // Provide more specific error messages
+        let errorMessage = 'Error submitting purchase: ' + (purchaseError?.message || 'Unknown error')
+        
+        if (purchaseError?.message?.includes('missing revert data')) {
+          errorMessage = 'Contract call failed during gas estimation. This might be due to:\n' +
+            '1. Farm not properly initialized\n' +
+            '2. Contract state issues\n' +
+            '3. Network connectivity problems\n\n' +
+            'Please try refreshing the page and ensure the farm exists.'
+        } else if (purchaseError?.message?.includes('insufficient funds')) {
+          errorMessage = 'Insufficient ETH for gas fees. Please add more ETH to your wallet.'
+        } else if (purchaseError?.message?.includes('user rejected')) {
+          errorMessage = 'Transaction was rejected by user.'
+        }
+        
+        alert(errorMessage)
+        setIsProcessing(false)
+        setTransactionType(null)
       }
     } catch (err) {
       console.error('Error in investment process:', err)
       alert('Error: ' + (err as Error).message)
       setIsProcessing(false)
       setIsApproving(false)
+      setTransactionType(null)
     }
   }
 
@@ -321,6 +467,19 @@ export function FarmInvestment({
     return (Number(balance) / 1e18).toFixed(2)
   }
 
+  // Check if user has sufficient MBT balance
+  const hasSufficientBalance = () => {
+    if (!mbtBalance || !treeCount) return false
+    const requiredAmount = getTreeCount() * 4 * 1e18
+    return mbtBalance >= BigInt(requiredAmount)
+  }
+
+  // Get MBT balance in a more readable format
+  const getMBTBalance = () => {
+    if (!mbtBalance) return 0
+    return Number(mbtBalance) / 1e18
+  }
+
   if (!isConnected) {
     return (
       <Card>
@@ -332,6 +491,49 @@ export function FarmInvestment({
           <div className="text-center py-8">
             <p className="text-gray-600 mb-4">Please connect your wallet to start investing</p>
             <ConnectButton />
+          </div>
+        </CardContent>
+      </Card>
+    )
+  }
+
+  // Show MBT token info if user has no balance
+  if (mbtBalance && mbtBalance === BigInt(0)) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center">
+            <TreePine className="h-5 w-5 mr-2" />
+            Investment Options
+          </CardTitle>
+          <CardDescription>
+            You need MBT tokens to invest in coffee farms
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="text-center py-8">
+            <div className="bg-amber-50 border border-amber-200 rounded-lg p-6 mb-6">
+              <h3 className="text-lg font-semibold text-amber-800 mb-2">No MBT Tokens Found</h3>
+              <p className="text-amber-700 mb-4">
+                You need MBT (Mocha Bean Tokens) to purchase coffee trees. 
+                Each tree costs 4 MBT tokens.
+              </p>
+              <div className="text-sm text-amber-600">
+                <p>To get MBT tokens:</p>
+                <ul className="list-disc list-inside mt-2 space-y-1">
+                  <li>Contact the admin to receive test MBT tokens</li>
+                  <li>Or participate in the token distribution program</li>
+                  <li>MBT tokens are required for all coffee farm investments</li>
+                </ul>
+              </div>
+            </div>
+            <Button 
+              onClick={() => window.open('https://sepolia.scrollscan.com/address/0x868BE05289CC245be73e8A461597893f6cb55b70', '_blank')}
+              variant="outline"
+              className="coffee-hover"
+            >
+              View MBT Contract on ScrollScan
+            </Button>
           </div>
         </CardContent>
       </Card>
@@ -363,14 +565,48 @@ export function FarmInvestment({
               🔄 Refresh
             </Button>
           </div>
+          
+          {/* Farm Validation Status */}
+          {farmData ? (
+            <div className="mb-4 p-3 bg-green-50 border border-green-200 rounded-lg">
+              <div className="flex items-center mb-2">
+                <span className="text-green-600 mr-2">✅</span>
+                <span className="text-sm font-semibold text-green-800">Farm Validated</span>
+              </div>
+              <div className="text-xs text-green-700">
+                <div>Name: {farmData.name}</div>
+                <div>Status: {farmData.isActive ? 'Active' : 'Inactive'}</div>
+                <div>Location: {farmData.location}</div>
+                <div>Total Farms: {totalFarms?.toString() || 'Loading...'}</div>
+              </div>
+            </div>
+          ) : farmDataError ? (
+            <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg">
+              <div className="flex items-center mb-2">
+                <span className="text-red-600 mr-2">❌</span>
+                <span className="text-sm font-semibold text-red-800">Farm Validation Failed</span>
+              </div>
+              <div className="text-xs text-red-700">
+                Error: {farmDataError.message}
+              </div>
+            </div>
+          ) : (
+            <div className="mb-4 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
+              <div className="flex items-center mb-2">
+                <span className="text-yellow-600 mr-2">⏳</span>
+                <span className="text-sm font-semibold text-yellow-800">Loading Farm Data...</span>
+              </div>
+            </div>
+          )}
+
           <div className="grid grid-cols-2 gap-4 text-xs">
             <div>
               <span className="text-coffee-mocha">Current Trees:</span>
-              <span className="ml-1 font-semibold">{totalTrees}</span>
+              <span className="ml-1 font-semibold">{farmData ? Number(farmData.currentTrees || 0) : totalTrees}</span>
             </div>
             <div>
               <span className="text-coffee-mocha">Capacity:</span>
-              <span className="ml-1 font-semibold">2,800</span>
+              <span className="ml-1 font-semibold">{farmData ? Number(farmData.treeCapacity || 0).toLocaleString() : treeCapacity.toLocaleString()}</span>
             </div>
             <div>
               <span className="text-coffee-mocha">Total Investment:</span>
@@ -384,6 +620,18 @@ export function FarmInvestment({
           <div className="mt-2 text-xs text-coffee-medium">
             Last updated: {new Date(lastRefresh).toLocaleTimeString()}
           </div>
+          
+          {/* Transaction Status */}
+          {(isProcessing || isApproving) && (
+            <div className="mt-2 p-2 bg-blue-50 rounded text-xs">
+              <div className="flex items-center">
+                <Loader2 className="h-3 w-3 animate-spin mr-2" />
+                <span>
+                  {isApproving ? 'Approving MBT...' : 'Processing purchase...'}
+                </span>
+              </div>
+            </div>
+          )}
         </div>
 
         <div className="space-y-6">
@@ -408,11 +656,28 @@ export function FarmInvestment({
           </div>
 
           {/* MBT Balance */}
-          <div className="bg-gray-50 p-4 rounded-lg">
+          <div className={`p-4 rounded-lg ${hasSufficientBalance() ? 'bg-green-50 border border-green-200' : 'bg-red-50 border border-red-200'}`}>
             <div className="flex items-center justify-between">
               <span className="text-sm text-gray-600">Your MBT Balance</span>
-              <span className="font-semibold">{formatBalance(mbtBalance)} MBT</span>
+              <span className={`font-semibold ${hasSufficientBalance() ? 'text-green-700' : 'text-red-700'}`}>
+                {formatBalance(mbtBalance)} MBT
+              </span>
             </div>
+            {treeCount && (
+              <div className="mt-2 text-xs">
+                <div className="flex justify-between">
+                  <span>Required for {getTreeCount()} trees:</span>
+                  <span className={hasSufficientBalance() ? 'text-green-600' : 'text-red-600'}>
+                    {(getTreeCount() * 4).toFixed(2)} MBT
+                  </span>
+                </div>
+                {!hasSufficientBalance() && (
+                  <div className="mt-1 text-red-600">
+                    ⚠️ Insufficient MBT balance. You need {(getTreeCount() * 4).toFixed(2)} MBT to purchase {getTreeCount()} trees.
+                  </div>
+                )}
+              </div>
+            )}
           </div>
 
           {/* Tree Investment Form */}
@@ -457,17 +722,31 @@ export function FarmInvestment({
                 <Button 
                   type="submit" 
                   className="w-full coffee-hover" 
-                  disabled={isPending || isConfirming || isProcessing || isApproving || !treeCount}
+                  disabled={
+                    isPending || 
+                    isConfirming || 
+                    isProcessing || 
+                    isApproving || 
+                    !treeCount || 
+                    !hasSufficientBalance()
+                  }
                 >
                   {isPending || isConfirming || isProcessing || isApproving ? (
                     <>
                       <Loader2 className="h-4 w-4 mr-2 animate-spin" />
                       {isApproving ? 'Approving MBT...' : isPending ? 'Purchasing Trees...' : 'Processing...'}
                     </>
+                  ) : !hasSufficientBalance() ? (
+                    'Insufficient MBT Balance'
                   ) : (
-                    'Purchase Trees'
+                    `Purchase ${getTreeCount()} Trees (${(getTreeCount() * 4).toFixed(2)} MBT)`
                   )}
                 </Button>
+                {!hasSufficientBalance() && treeCount && (
+                  <p className="text-xs text-red-600 mt-2 text-center">
+                    You need {(getTreeCount() * 4).toFixed(2)} MBT to purchase {getTreeCount()} trees
+                  </p>
+                )}
               </form>
             </div>
           )}
@@ -544,26 +823,50 @@ export function FarmInvestment({
 
           {/* Status Messages */}
           {error && (
-            <div className="text-red-600 text-sm">
-              Error: {error.message}
+            <div className="bg-red-50 border border-red-200 rounded-lg p-4 text-red-700 text-sm">
+              <div className="font-semibold mb-2">Transaction Error:</div>
+              <div className="mb-2">{error.message}</div>
+              <div className="text-xs text-red-600">
+                This might be due to insufficient MBT balance, network issues, or contract state problems.
+                Please check your MBT balance and try again.
+              </div>
             </div>
           )}
 
           {approvalHash && (
-            <div className="text-blue-600 text-sm">
-              Approval transaction submitted: {approvalHash}
-              <br />
-              <span className="text-gray-600">
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 text-blue-700 text-sm">
+              <div className="font-semibold mb-2">Approval Transaction Submitted:</div>
+              <div className="mb-2 break-all">{approvalHash}</div>
+              <div className="text-xs text-blue-600">
                 Approving {(getTreeCount() * 4).toFixed(2)} MBT for purchase...
-              </span>
+                <br />
+                Please wait for confirmation before the purchase proceeds automatically.
+              </div>
             </div>
           )}
 
           {isSuccess && (
-            <div className="text-green-600 text-sm">
-              Investment successful! Transaction hash: {hash}
-              <br />
-              <span className="text-blue-600">Redirecting to dashboard...</span>
+            <div className="bg-green-50 border border-green-200 rounded-lg p-4 text-green-700 text-sm">
+              <div className="font-semibold mb-2">Investment Successful!</div>
+              <div className="mb-2 break-all">Transaction hash: {hash}</div>
+              <div className="text-xs text-green-600">
+                Redirecting to dashboard...
+              </div>
+            </div>
+          )}
+
+          {/* Debug Information */}
+          {process.env.NODE_ENV === 'development' && (
+            <div className="bg-gray-50 border border-gray-200 rounded-lg p-4 text-xs text-gray-600">
+              <div className="font-semibold mb-2">Debug Information:</div>
+              <div>Farm ID: {farmId}</div>
+              <div>Tree Count: {treeCount}</div>
+              <div>Total Cost: {(getTreeCount() * 4).toFixed(2)} MBT</div>
+              <div>User Balance: {formatBalance(mbtBalance)} MBT</div>
+              <div>Current Allowance: {formatBalance(currentAllowance)} MBT</div>
+              <div>Is Processing: {isProcessing ? 'Yes' : 'No'}</div>
+              <div>Is Approving: {isApproving ? 'Yes' : 'No'}</div>
+              <div>Transaction Type: {transactionType || 'None'}</div>
             </div>
           )}
         </div>

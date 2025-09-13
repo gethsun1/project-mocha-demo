@@ -1,8 +1,21 @@
+'use client'
+
 import { Button } from '@/components/ui/button'
 import { Coffee, TreePine, DollarSign, Shield } from 'lucide-react'
 import Link from 'next/link'
+import { useAccount } from 'wagmi'
+import { isAdminAddress } from '@/lib/admin'
+import { useEffect, useState } from 'react'
 
 export function Hero() {
+  const [mounted, setMounted] = useState(false)
+  const { address, isConnected } = useAccount()
+
+  useEffect(() => {
+    setMounted(true)
+  }, [])
+
+  const isAdmin = mounted && address && isAdminAddress(address)
   return (
     <section className="py-20 px-4 relative overflow-hidden">
       {/* Background decoration */}
@@ -25,9 +38,14 @@ export function Hero() {
           <Button size="lg" asChild className="coffee-hover">
             <Link href="#farms">Explore Farms</Link>
           </Button>
-          <Button size="lg" variant="outline" asChild className="coffee-hover coffee-border">
-            <Link href="/admin">Admin Dashboard</Link>
+          <Button size="lg" asChild className="coffee-hover">
+            <Link href="/dashboard">My Dashboard</Link>
           </Button>
+          {isAdmin && (
+            <Button size="lg" variant="outline" asChild className="coffee-hover coffee-border">
+              <Link href="/admin">Admin Dashboard</Link>
+            </Button>
+          )}
         </div>
 
         {/* Stats */}

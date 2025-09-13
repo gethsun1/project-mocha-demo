@@ -4,10 +4,33 @@ import { ConnectButton } from '@rainbow-me/rainbowkit'
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
 import { Coffee, Menu, X } from 'lucide-react'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
+import { useAccount } from 'wagmi'
+import { isAdminAddress } from '@/lib/admin'
 
 export function Header() {
   const [isMenuOpen, setIsMenuOpen] = useState(false)
+  const [mounted, setMounted] = useState(false)
+  const { address, isConnected } = useAccount()
+
+  useEffect(() => {
+    setMounted(true)
+  }, [])
+
+  const isAdmin = mounted && address && isAdminAddress(address)
+  
+  // Debug logging
+  useEffect(() => {
+    if (mounted) {
+      console.log('Admin check:', {
+        mounted,
+        isConnected,
+        address,
+        isAdminAddress: address ? isAdminAddress(address) : false,
+        isAdmin
+      })
+    }
+  }, [mounted, isConnected, address, isAdmin])
 
   return (
     <header className="bg-white/90 backdrop-blur-sm coffee-shadow border-b border-coffee-light">
@@ -27,12 +50,11 @@ export function Header() {
             <Link href="/dashboard" className="text-coffee-mocha hover:text-coffee-medium coffee-hover px-3 py-2 rounded-md transition-colors">
               Dashboard
             </Link>
-            <Link href="/admin" className="text-coffee-mocha hover:text-coffee-medium coffee-hover px-3 py-2 rounded-md transition-colors">
-              Admin
-            </Link>
-            <Link href="/about" className="text-coffee-mocha hover:text-coffee-medium coffee-hover px-3 py-2 rounded-md transition-colors">
-              About
-            </Link>
+            {isAdmin && (
+              <Link href="/admin" className="text-coffee-mocha hover:text-coffee-medium coffee-hover px-3 py-2 rounded-md transition-colors">
+                Admin
+              </Link>
+            )}
           </nav>
 
           {/* Wallet Connection */}
@@ -71,20 +93,15 @@ export function Header() {
               >
                 Dashboard
               </Link>
-              <Link 
-                href="/admin" 
-                className="text-coffee-mocha hover:text-coffee-medium coffee-hover px-3 py-2 rounded-md transition-colors"
-                onClick={() => setIsMenuOpen(false)}
-              >
-                Admin
-              </Link>
-              <Link 
-                href="/about" 
-                className="text-coffee-mocha hover:text-coffee-medium coffee-hover px-3 py-2 rounded-md transition-colors"
-                onClick={() => setIsMenuOpen(false)}
-              >
-                About
-              </Link>
+              {isAdmin && (
+                <Link 
+                  href="/admin" 
+                  className="text-coffee-mocha hover:text-coffee-medium coffee-hover px-3 py-2 rounded-md transition-colors"
+                  onClick={() => setIsMenuOpen(false)}
+                >
+                  Admin
+                </Link>
+              )}
               <div className="pt-4">
                 <ConnectButton />
               </div>

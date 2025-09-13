@@ -1,7 +1,20 @@
+'use client'
+
 import Link from 'next/link'
 import { Coffee, Github, Twitter, Mail } from 'lucide-react'
+import { useAccount } from 'wagmi'
+import { isAdminAddress } from '@/lib/admin'
+import { useEffect, useState } from 'react'
 
 export function Footer() {
+  const [mounted, setMounted] = useState(false)
+  const { address, isConnected } = useAccount()
+
+  useEffect(() => {
+    setMounted(true)
+  }, [])
+
+  const isAdmin = mounted && address && isAdminAddress(address)
   return (
     <footer className="bg-coffee-espresso text-white">
       <div className="container mx-auto px-4 py-12">
@@ -39,15 +52,17 @@ export function Footer() {
                 </Link>
               </li>
               <li>
-                <Link href="/admin" className="text-coffee-light hover:text-coffee-medium transition-colors coffee-hover">
-                  Admin
+                <Link href="/dashboard" className="text-coffee-light hover:text-coffee-medium transition-colors coffee-hover">
+                  Dashboard
                 </Link>
               </li>
-              <li>
-                <Link href="/about" className="text-coffee-light hover:text-coffee-medium transition-colors coffee-hover">
-                  About
-                </Link>
-              </li>
+              {isAdmin && (
+                <li>
+                  <Link href="/admin" className="text-coffee-light hover:text-coffee-medium transition-colors coffee-hover">
+                    Admin
+                  </Link>
+                </li>
+              )}
               <li>
                 <Link href="/docs" className="text-coffee-light hover:text-coffee-medium transition-colors coffee-hover">
                   Documentation

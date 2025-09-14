@@ -3,6 +3,7 @@
 // Define admin addresses - you can add more admin addresses here
 export const ADMIN_ADDRESSES = [
   '0x842d803eB7d05D6Aa2DdB8c3Eb912e6d97ce31C4', // Deployer/Admin address
+  '0xc4110712cef3e62b628e414ebcc4fc0343c2fe4c', // Added admin wallet
   // Add more admin addresses as needed
 ]
 

@@ -33,7 +33,7 @@
     "tailwind-merge": "^2.0.0",
     "tailwindcss-animate": "^1.0.7",
     "viem": "^2.37.5",
-    "wagmi": "^2.16.9"
+    "wagmi": "^2.19.5"
   },
   "devDependencies": {
     "@nomicfoundation/hardhat-chai-matchers": "^2.1.0",
